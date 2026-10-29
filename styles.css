@@ -110,6 +110,9 @@ textarea { resize: vertical; line-height: 1.6; }
 .auth-stage { width: min(100%, 480px); text-align: center; perspective: 1100px; }
 .auth-stage > .brand-mark { margin-inline: auto; }
 .auth-stage .auth-copy { max-width: 390px; margin-inline: auto; }
+.credit { max-width: 340px; margin: 1.75rem auto 0; border-top: 1px solid var(--border); padding-top: 1rem; color: var(--muted); font-size: .78rem; line-height: 1.6; text-align: center; }
+.credit-kicker { display: block; margin-bottom: .3rem; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; }
+.credit strong { color: var(--accent); font-weight: 650; white-space: nowrap; }
 .identity-card-3d {
   --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
   position: relative; display: block; width: min(100%, 420px); aspect-ratio: 1.68 / 1; overflow: hidden;
