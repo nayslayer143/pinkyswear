@@ -127,8 +127,9 @@ async function sha256(value) {
 
 async function getGoogleClientId(env) {
   const row = await env.DB.prepare('SELECT value_json FROM admin_settings WHERE setting_key = ?').bind('googleClientId').first();
-  if (!row) return GOOGLE_CLIENT_ID;
-  try { return String(JSON.parse(row.value_json) || ''); } catch { return GOOGLE_CLIENT_ID; }
+  const fallback = env.GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID;
+  if (!row) return fallback;
+  try { return String(JSON.parse(row.value_json) || '') || fallback; } catch { return fallback; }
 }
 
 async function currentIdentity(request, env) {
@@ -148,11 +149,15 @@ async function currentIdentity(request, env) {
   return platform ? { ...platform, provider: 'websim', avatarUrl: `https://images.websim.com/avatar/${encodeURIComponent(platform.username)}` } : null;
 }
 
-function isAdmin(caller, request) {
+// Off Websim, ADMIN_GOOGLE_EMAILS (comma-separated, set as a deployment secret) names the
+// Google accounts that may administer; Google has verified each address at sign-in.
+function isAdmin(caller, request, env) {
   const platform = request ? identity(request) : null;
   if (platform && ADMIN_WEB_SIM_USERNAMES.has(platform.username.toLowerCase())) return true;
-  if (!caller) return false;
-  return caller.provider === 'google' && GOOGLE_ADMIN_SUB && caller.subject === GOOGLE_ADMIN_SUB;
+  if (!caller || caller.provider !== 'google') return false;
+  if (GOOGLE_ADMIN_SUB && caller.subject === GOOGLE_ADMIN_SUB) return true;
+  const admins = String(env?.ADMIN_GOOGLE_EMAILS || '').toLowerCase().split(',').map((value) => value.trim()).filter(Boolean);
+  return Boolean(caller.email) && admins.includes(caller.email.toLowerCase());
 }
 
 async function verifyGoogleCredential(credential, nonce, env) {
@@ -465,7 +470,7 @@ async function encryptDocument(env, userId, value) {
 }
 
 async function decryptDocument(env, userId, url, encryptionKey = null) {
-  const response = await fetch(url);
+  const response = env.BLOB.fetch ? await env.BLOB.fetch(url) : await fetch(url);
   if (!response.ok) throw new Error('Stored document data is unavailable.');
   const packed = new Uint8Array(await response.arrayBuffer());
   if (packed.length < 29) throw new Error('Stored document data is invalid.');
@@ -519,6 +524,10 @@ export default {
           const handle = `${rawHandle}-${String(claims.sub).slice(-6).toLowerCase()}`.slice(0, 24);
           await env.DB.prepare(`INSERT OR IGNORE INTO profiles (user_id, username, handle, handle_normalized, display_name, role, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, 'Field Agent', ?, ?)`).bind(userId, email, handle, handle, displayName, now, now).run();
+          // A first sign-in also joins the host's shared sign-up list, when the host provides one.
+          if (env.recordSignup) {
+            try { await env.recordSignup({ email, name: displayName }); } catch (error) { console.warn('Sign-up registry write failed', error); }
+          }
         }
         const sessionToken = base64(crypto.getRandomValues(new Uint8Array(32))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
         const expiresAt = new Date(Date.now() + 30 * 86400_000).toISOString();
@@ -539,7 +548,7 @@ export default {
     }
 
     if (url.pathname === '/api/admin/overview' && request.method === 'GET') {
-      if (!caller || !isAdmin(caller, request)) return json({ error: 'Admin access required.' }, 403);
+      if (!caller || !isAdmin(caller, request, env)) return json({ error: 'Admin access required.' }, 403);
       const settings = await readAdminSettings(env);
       const { results = [] } = await env.DB.prepare('SELECT action, details_json, created_at FROM admin_audit ORDER BY id DESC LIMIT 20').all();
       const { results: users = [] } = await env.DB.prepare(`SELECT p.user_id, p.username, p.handle, p.display_name, p.role, p.created_at, p.updated_at,
@@ -551,7 +560,7 @@ export default {
       return json({ settings, audit: results, users, googleCount, admins: [...ADMIN_WEB_SIM_USERNAMES] });
     }
     if (url.pathname === '/api/admin/settings' && request.method === 'PUT') {
-      if (!caller || !isAdmin(caller, request)) return json({ error: 'Admin access required.' }, 403);
+      if (!caller || !isAdmin(caller, request, env)) return json({ error: 'Admin access required.' }, 403);
       if (request.headers.get('origin') && new URL(request.headers.get('origin')).origin !== url.origin) return json({ error: 'Cross-site admin changes were rejected.' }, 403);
       let input;
       try { input = await request.json(); } catch { return json({ error: 'Invalid JSON.' }, 400); }
@@ -608,7 +617,7 @@ export default {
         },
         profile: profileResponse(row, caller.username, caller.avatarUrl),
         provider: caller.provider,
-        isAdmin: isAdmin(caller, request)
+        isAdmin: isAdmin(caller, request, env)
       });
     }
 

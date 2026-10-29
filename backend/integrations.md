@@ -14,6 +14,10 @@ PinkySwear uses IndexedDB as the local source of truth. Signed-in Websim and Goo
 
 Websim sessions use the trusted `x-websim-user-id` header. Google sessions use a server-issued, HttpOnly cookie whose random token is stored only as a SHA-256 hash. Both resolve to a server-controlled user scope; clients cannot choose another account's scope.
 
+## Cloudflare deployment
+
+The Cloudflare Pages deployment at `pinkyswear.asdfghjk.lol` runs this same `server.js` behind `functions/api/[[path]].js`. That wrapper strips every `x-websim-*` header, so Google sign-in is the only identity there; it stores encrypted payloads in R2 and records first sign-ins in the shared Omega sign-up list. The OAuth client ID comes from the `GOOGLE_CLIENT_ID` variable and admin access from `ADMIN_GOOGLE_EMAILS`. Bindings and setup are in `deploy/README.md`.
+
 ## Google sign-in setup
 
 1. Create a Google OAuth client with application type **Web application** in Google Cloud Console.

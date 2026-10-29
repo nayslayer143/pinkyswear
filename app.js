@@ -17,6 +17,8 @@ import { applyTemplateSchemaValues, templateContentToText } from './templateSche
 const PROFILE_KEY = 'pinkyswear.profile.v2';
 const SIGNED_OUT_KEY = 'pinkyswear.signed-out';
 const SIGNED_OUT_OWNER_KEY = 'pinkyswear.signed-out-owner';
+// Shown beside both Google buttons and recorded verbatim with the sign-up (functions/_lib/registry.js).
+const SIGNUP_NOTICE = 'Signing in also adds your name and email to the Omega MegaCorp sign-up list, so we may email you about PinkySwear and related Omega products. To be removed, email jordan@asdfghjk.lol.';
 const byId = (id) => document.getElementById(id);
 
 class PinkySwearApp {
@@ -223,10 +225,10 @@ class PinkySwearApp {
       const configured = Boolean(this.googleClientId);
       ['google-setup-landing', 'google-setup-modal'].forEach((id) => { byId(id).hidden = configured; });
       byId('google-signin-help').textContent = configured
-        ? 'Sign in with Google to sync your agreements across devices.'
+        ? `Sign in with Google to sync your agreements across devices. ${SIGNUP_NOTICE}`
         : 'Google sign-in needs an OAuth Web client ID. Use the account card for device-only access.';
       byId('google-modal-help').textContent = configured
-        ? 'Google accounts are verified by the PinkySwear server.'
+        ? `Google accounts are verified by the PinkySwear server. ${SIGNUP_NOTICE}`
         : 'Google sign-in will be available when the OAuth client is configured.';
       if (!configured) return;
       await this.loadGoogleIdentityScript();

@@ -29,6 +29,8 @@ Do not open `index.html` directly from `file://`: service workers, camera access
 
 Open `/tests.html` from the same static server. The dependency-free browser suite exercises normalization, template replacement, rich-text sanitization, backup validation, filenames, and data URL validation. A red test prevents the final success summary.
 
+The Cloudflare `/api` backend has a Node suite: `node --test 'tests/*.node.test.mjs'`. See `deploy/README.md`.
+
 For smoke testing, verify these workflows in a fresh browser profile:
 
 1. Create two device profiles and confirm their document lists stay separate.
