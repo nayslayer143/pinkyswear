@@ -1,0 +1,12 @@
+# Security headers for pinkyswear.asdfghjk.lol (Cloudflare Pages reads this file).
+# No CSP yet: the app loads pinned CDN libraries and fetches user-supplied logo URLs,
+# so a policy needs an inventory first (README "Production limitations").
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()
+
+/service-worker.js
+  Cache-Control: no-cache
